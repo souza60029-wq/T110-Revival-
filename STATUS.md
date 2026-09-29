@@ -7,8 +7,8 @@
 - Caminho escolhido: kernel próprio baseado no fonte aberto da Samsung + Linux mínimo via Buildroot. Android 9 foi descartado (ver `docs/decisoes.md`).
 - Build do kernel: baseline concluído com sucesso no GitHub Actions, sem alterações funcionais no código do kernel. `zImage` gerado e salvo em `kernel/builds/baseline/zImage`.
 - Teste físico: o `zImage` baseline ainda **não** foi testado no tablet.
-- Backups TWRP completos: primeiro backup com 13 partições pequenas (boot, bootloader, radio, recovery, efs, custom, preload, dtim, loke1st, loke2nd, mep2, mrd e mrd1); segundo cobrindo `system` e `user/data`. Os 15 arquivos de partição foram comparados com seus `.md5` e todos conferiram.
-- Os ZIPs dos backups ainda não foram publicados aqui: este repositório é público, um deles contém `user/data` e o ZIP maior tem 505 MB (acima do limite normal de arquivo do GitHub). Ver os `LEIA-ME.md` em `backups/`.
+- Os dois backups TWRP originais estão preservados localmente. Os 15 arquivos de partição dos originais foram comparados com os `.md5`: 15/15 conferiram.
+- O repositório público contém apenas derivados **sanitizados e parciais**: do primeiro, 7 imagens de partição; do segundo, uma imagem `system` filtrada. EFS, `user/data` e partições adicionais de identidade/fábrica foram excluídas. Esses ZIPs não são conjuntos completos nem devem ser usados para restauração integral; detalhes em `backups/*/LEIA-ME.md`.
 
 ## Próximo passo imediato
 - Testar o `zImage` baseline no tablet físico via TWRP, antes de começar qualquer modificação no kernel; registrar o resultado.
