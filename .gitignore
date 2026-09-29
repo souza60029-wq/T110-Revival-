@@ -1,0 +1,18 @@
+# Kernel build output
+Kernel/.config
+Kernel/.config.old
+Kernel/Module.symvers
+Kernel/modules.order
+Kernel/System.map
+Kernel/vmlinux
+Kernel/.*.cmd
+Kernel/**/*.o
+Kernel/**/*.a
+Kernel/**/*.ko
+Kernel/**/*.mod
+Kernel/**/*.mod.c
+Kernel/**/*.order
+Kernel/arch/arm/boot/Image
+Kernel/arch/arm/boot/zImage
+Kernel/include/config/
+Kernel/include/generated/

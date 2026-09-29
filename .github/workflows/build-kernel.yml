@@ -1,0 +1,47 @@
+name: Build SM-T110 kernel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Linux 3.4.5 for SM-T110
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bc bison build-essential flex libncurses-dev libssl-dev
+
+      - name: Install Android arm-eabi-4.6 toolchain
+        env:
+          TOOLCHAIN_COMMIT: b4ecd7806d8f46cddeacaf9f8de92c191fb266e4
+        run: |
+          git clone --quiet --depth 1 --branch jb-release \
+            https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6 \
+            "$RUNNER_TEMP/arm-eabi-4.6"
+          test "$(git -C "$RUNNER_TEMP/arm-eabi-4.6" rev-parse HEAD)" = "$TOOLCHAIN_COMMIT"
+          test -x "$RUNNER_TEMP/arm-eabi-4.6/bin/arm-eabi-gcc"
+          echo "$RUNNER_TEMP/arm-eabi-4.6/bin" >> "$GITHUB_PATH"
+          echo "CROSS_COMPILE=$RUNNER_TEMP/arm-eabi-4.6/bin/arm-eabi-" >> "$GITHUB_ENV"
+
+      - name: Configure and compile
+        run: |
+          make -C Kernel ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" pxa986_goyawifi_rev02_defconfig
+          make -C Kernel ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" -j2 zImage modules
+          test -s Kernel/arch/arm/boot/zImage
+
+      - name: Upload kernel image
+        uses: actions/upload-artifact@v4
+        with:
+          name: SM-T110-zImage
+          path: Kernel/arch/arm/boot/zImage
+          if-no-files-found: error
