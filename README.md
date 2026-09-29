@@ -10,6 +10,8 @@ Este repositório contém o código-fonte do kernel publicado pela Samsung para 
 
 O workflow compila o `pxa986_goyawifi_rev02_defconfig` com o compilador **arm-eabi-4.6**, indicado pelo fabricante. Ele é manual (`workflow_dispatch`): não começa automaticamente a cada envio de código.
 
+Como o runner atual do GitHub usa Perl que rejeita uma expressão obsoleta no script auxiliar de Linux 3.4, o workflow adapta essa verificação para sua forma equivalente apenas no espaço temporário da execução. A árvore versionada do kernel permanece inalterada.
+
 ## Compilação local (Linux)
 
 O procedimento original requer o toolchain `arm-eabi-4.6`:
