@@ -1,6 +1,24 @@
 # Kernel build output
 Kernel/.config
 Kernel/.config.old
+# Build output after the source tree move; keep kernel/builds/baseline/zImage tracked.
+kernel/src/.config
+kernel/src/.config.old
+kernel/src/Module.symvers
+kernel/src/modules.order
+kernel/src/System.map
+kernel/src/vmlinux
+kernel/src/.*.cmd
+kernel/src/**/*.o
+kernel/src/**/*.a
+kernel/src/**/*.ko
+kernel/src/**/*.mod
+kernel/src/**/*.mod.c
+kernel/src/**/*.order
+kernel/src/arch/arm/boot/Image
+kernel/src/arch/arm/boot/zImage
+kernel/src/include/config/
+kernel/src/include/generated/
 Kernel/Module.symvers
 Kernel/modules.order
 Kernel/System.map

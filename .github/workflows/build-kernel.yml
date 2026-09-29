@@ -37,7 +37,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          helper = Path("Kernel/kernel/timeconst.pl")
+          helper = Path("kernel/src/kernel/timeconst.pl")
           source = helper.read_text()
           old = "if (!defined(@val)) {"
           if source.count(old) != 1:
@@ -47,13 +47,13 @@ jobs:
 
       - name: Configure and compile
         run: |
-          make -C Kernel ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" pxa986_goyawifi_rev02_defconfig
-          make -C Kernel ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" -j2 zImage modules
-          test -s Kernel/arch/arm/boot/zImage
+          make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" pxa986_goyawifi_rev02_defconfig
+          make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" -j2 zImage modules
+          test -s kernel/src/arch/arm/boot/zImage
 
       - name: Upload kernel image
         uses: actions/upload-artifact@v4
         with:
           name: SM-T110-zImage
-          path: Kernel/arch/arm/boot/zImage
+          path: kernel/src/arch/arm/boot/zImage
           if-no-files-found: error
