@@ -47,9 +47,23 @@ jobs:
 
       - name: Configure and compile
         run: |
+          export KBUILD_BUILD_VERSION=2
           make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" pxa986_goyawifi_rev02_defconfig
+          grep -qx 'CONFIG_LOCALVERSION="-2679758"' kernel/src/.config
+          grep -qx '# CONFIG_LOCALVERSION_AUTO is not set' kernel/src/.config
           make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" -j2 zImage modules
           test -s kernel/src/arch/arm/boot/zImage
+          release=$(sed -n 's/^#define UTS_RELEASE "\(.*\)"/\1/p' kernel/src/include/generated/utsrelease.h)
+          uts_version=$(sed -n 's/^#define UTS_VERSION "\(.*\)"/\1/p' kernel/src/include/linux/compile.h)
+          echo "UTS_RELEASE=$release"
+          echo "UTS_VERSION=$uts_version"
+          test "$release" = "3.4.5-2679758"
+          case "$uts_version" in "#2 SMP PREEMPT "*) ;; *) echo "Unexpected UTS_VERSION: $uts_version"; exit 1 ;; esac
+          module=$(find kernel/src -type f -name '*.ko' | sort | head -n 1)
+          test -n "$module"
+          vermagic=$(strings "$module" | sed -n 's/^vermagic=//p' | head -n 1)
+          echo "MODULE_VERMAGIC=$vermagic"
+          case "$vermagic" in "3.4.5-2679758 SMP preempt "*) ;; *) echo "Unexpected vermagic: $vermagic"; exit 1 ;; esac
 
       - name: Upload kernel image
         uses: actions/upload-artifact@v4
