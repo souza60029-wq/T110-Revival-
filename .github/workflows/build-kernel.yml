@@ -51,6 +51,10 @@ jobs:
           make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" pxa986_goyawifi_rev02_defconfig
           grep -qx 'CONFIG_LOCALVERSION="-2679758"' kernel/src/.config
           grep -qx '# CONFIG_LOCALVERSION_AUTO is not set' kernel/src/.config
+          grep -qx 'CONFIG_USB=y' kernel/src/.config
+          grep -qx 'CONFIG_USB_EHCI_HCD=y' kernel/src/.config
+          grep -qx 'CONFIG_USB_EHCI_MV=y' kernel/src/.config
+          grep -qx 'CONFIG_USB_EHCI_MV_U2O=y' kernel/src/.config
           make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" -j2 zImage modules
           test -s kernel/src/arch/arm/boot/zImage
           release=$(sed -n 's/^#define UTS_RELEASE "\(.*\)"/\1/p' kernel/src/include/generated/utsrelease.h)

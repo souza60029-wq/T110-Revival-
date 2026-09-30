@@ -70,6 +70,7 @@
 #include <mach/irqs.h>
 #include <mach/isl29043.h>
 #include <mach/pxa988.h>
+#include <mach/pxa910.h>
 #include <mach/soc_coda7542.h>
 #include <mach/regs-rtc.h>
 #include <mach/regs-ciu.h>
@@ -3022,7 +3023,7 @@ static struct platform_device ktd253_device  = {
 };
 #endif
 
-#ifdef CONFIG_USB_MV_UDC
+#if defined(CONFIG_USB_MV_UDC) || defined(CONFIG_USB_EHCI_MV_U2O)
 static char *pxa988_usb_clock_name[] = {
 	[0] = "UDCCLK",
 };
@@ -3032,11 +3033,11 @@ static struct mv_usb_platform_data emeidkb_usb_pdata = {
 	.clkname	= pxa988_usb_clock_name,
 	.id		= PXA_USB_DEV_OTG,
 	.extern_attr	= MV_USB_HAS_VBUS_DETECTION,
-	.mode		= MV_USB_MODE_DEVICE,
+	.mode		= MV_USB_MODE_HOST,
 	.phy_init	= pxa_usb_phy_init,
 	.phy_deinit	= pxa_usb_phy_deinit,
 };
-#endif /* CONFIG_USB_MV_UDC */
+#endif /* CONFIG_USB_MV_UDC || CONFIG_USB_EHCI_MV_U2O */
 
 #ifdef CONFIG_MMC_SDHCI_PXAV3
 #define MFP_WIB_PDn		(GPIO051_GPIO_51 | MFP_PULL_FLOAT)
@@ -4753,7 +4754,11 @@ static void __init emeidkb_init(void)
 	pxa_register_coda7542();
 #endif
 
-#ifdef CONFIG_USB_MV_UDC
+#ifdef CONFIG_USB_EHCI_MV_U2O
+	/* U2O is single-role: register EHCI host instead of the gadget UDC. */
+	pxa168_device_u2oehci.dev.platform_data = &emeidkb_usb_pdata;
+	platform_device_register(&pxa168_device_u2oehci);
+#elif defined(CONFIG_USB_MV_UDC)
 	pxa988_device_udc.dev.platform_data = &emeidkb_usb_pdata;
 	platform_device_register(&pxa988_device_udc);
 #endif
