@@ -54,7 +54,7 @@ jobs:
           make -C kernel/src ARCH=arm CROSS_COMPILE="$CROSS_COMPILE" -j2 zImage modules
           test -s kernel/src/arch/arm/boot/zImage
           release=$(sed -n 's/^#define UTS_RELEASE "\(.*\)"/\1/p' kernel/src/include/generated/utsrelease.h)
-          uts_version=$(sed -n 's/^#define UTS_VERSION "\(.*\)"/\1/p' kernel/src/include/linux/compile.h)
+          uts_version=$(sed -n 's/^#define UTS_VERSION "\(.*\)"/\1/p' kernel/src/include/generated/compile.h)
           echo "UTS_RELEASE=$release"
           echo "UTS_VERSION=$uts_version"
           test "$release" = "3.4.5-2679758"
