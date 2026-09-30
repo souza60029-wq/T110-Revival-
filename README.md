@@ -1,29 +1,123 @@
-# T110 Revival — Samsung SM-T110
+# T110 Revival
 
-Este repositório contém o código-fonte do kernel publicado pela Samsung para o **SM-T110 (goyawifi)**, versão Linux **3.4.5**, em `kernel/src/`. O código foi extraído sem alterações de `Kernel.tar.gz`, incluído em `SM-T110_NA_JB_Opensource.zip`. As instruções originais do fabricante estão em [`kernel/src/README_Kernel_vendor.txt`](kernel/src/README_Kernel_vendor.txt).
+Um Linux mínimo e sob medida para o Samsung Galaxy Tab 3 Lite
+(SM-T110 / Goyawifi).
 
-## Compilar pelo GitHub
+O objetivo do T110 Revival é transformar o hardware original do
+SM-T110 em uma plataforma Linux extremamente leve, mantendo o
+máximo possível do hardware utilizável e eliminando a camada
+desnecessária de um sistema Android completo.
 
-1. Abra a aba **Actions** deste repositório.
-2. Escolha **Build SM-T110 kernel** e clique em **Run workflow**.
-3. Quando o processo terminar, abra a execução e baixe o artefato **SM-T110-zImage**.
+## Objetivo
 
-O workflow compila o `pxa986_goyawifi_rev02_defconfig` com o compilador **arm-eabi-4.6**, indicado pelo fabricante. Ele é manual (`workflow_dispatch`): não começa automaticamente a cada envio de código.
+O projeto não pretende simplesmente portar uma distribuição Linux
+genérica para o tablet.
 
-Como o runner atual do GitHub usa Perl que rejeita uma expressão obsoleta no script auxiliar de Linux 3.4, o workflow adapta essa verificação para sua forma equivalente apenas no espaço temporário da execução. A árvore versionada do kernel permanece inalterada.
+A ideia é construir um sistema especificamente adaptado ao T110:
 
-## Compilação local (Linux)
+- kernel próprio baseado no código-fonte oficial da Samsung;
+- sistema Linux mínimo usando Buildroot;
+- baixo consumo de RAM e armazenamento;
+- ajustes específicos para o hardware do T110;
+- investigação e otimização de CPU, GPU, memória e energia;
+- suporte USB conforme as capacidades reais do hardware;
+- interface gráfica própria e leve;
+- ambiente com aparência e comportamento de desktop.
 
-O procedimento original requer o toolchain `arm-eabi-4.6`:
+## Arquitetura
 
-```sh
-cd kernel/src
-export ARCH=arm
-export CROSS_COMPILE=/caminho/para/arm-eabi-4.6/bin/arm-eabi-
-make pxa986_goyawifi_rev02_defconfig
-make -j2
-```
+O sistema será construído em camadas:
 
-A imagem do kernel baseline validada pelo build fica em `kernel/builds/baseline/zImage`. Ela ainda aguarda teste no tablet físico.
+    Samsung Kernel
+          ↓
+    Kernel modificado
+          ↓
+       Buildroot
+          ↓
+      Linux mínimo
+          ↓
+    Interface gráfica
+          ↓
+      T110 Revival
 
-> O arquivo compactado original tem mais de 100 MB e excede o limite por arquivo do GitHub. Por isso, este repositório guarda a árvore de fontes extraída, em vez do `Kernel.tar.gz` como um único arquivo.
+## Estado atual
+
+### Kernel
+
+[✓] Código-fonte oficial da Samsung localizado
+
+[✓] Configuração do T110 identificada
+
+[✓] Kernel compilando no GitHub Actions
+
+[✓] `zImage` gerado
+
+[ ] Primeiro boot no hardware real
+
+[ ] Ajustes de energia/governor
+
+[ ] Investigação de USB host/OTG
+
+### Sistema
+
+[ ] Buildroot
+
+[ ] Root filesystem mínimo
+
+[ ] Primeiro Linux funcional
+
+[ ] Framebuffer
+
+[ ] Interface gráfica
+
+[ ] Desktop próprio
+
+## Hardware
+
+O projeto parte do hardware original do SM-T110.
+
+Antes de alterar qualquer componente crítico, o projeto prioriza
+testes somente de leitura e documentação do hardware.
+
+## Desenvolvimento
+
+O projeto utiliza GitHub Actions para realizar as compilações,
+permitindo desenvolver sem depender de um computador local.
+
+Os artefatos gerados pelas Actions incluem as imagens necessárias
+para os testes.
+
+## Segurança
+
+Nenhuma imagem é considerada pronta para instalação apenas porque
+a compilação foi concluída.
+
+Cada kernel deve ser:
+
+1. compilado;
+2. empacotado corretamente;
+3. comparado com o boot original;
+4. testado com backup disponível;
+5. instalado somente após definir uma forma de recuperação.
+
+## Roadmap
+
+1. Kernel original reproduzível
+2. Primeiro boot
+3. Ajustes do kernel
+4. Buildroot mínimo
+5. Linux inicializável
+6. Framebuffer
+7. Interface gráfica própria
+8. Otimizações específicas do T110
+9. USB e periféricos
+10. Sistema final
+
+## Filosofia
+
+O T110 Revival não tenta transformar o SM-T110 em um dispositivo
+moderno através de camadas cada vez maiores.
+
+A proposta é o contrário:
+
+**usar somente aquilo que o hardware realmente precisa.**
