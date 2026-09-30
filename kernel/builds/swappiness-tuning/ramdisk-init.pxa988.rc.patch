@@ -1,0 +1,9 @@
+--- stock:/init.pxa988.rc
++++ swappiness-tuning:/init.pxa988.rc
+@@ -398,7 +398,7 @@
+ on boot
+     # RTCC Swappiness
+-    write /proc/sys/vm/swappiness 100
++    write /proc/sys/vm/swappiness 60
+     setprop ro.media.gst.enabled 1
+     setprop service.camera.af 1
