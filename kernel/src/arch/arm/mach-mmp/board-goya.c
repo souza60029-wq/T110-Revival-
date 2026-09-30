@@ -70,7 +70,6 @@
 #include <mach/irqs.h>
 #include <mach/isl29043.h>
 #include <mach/pxa988.h>
-#include <mach/pxa910.h>
 #include <mach/soc_coda7542.h>
 #include <mach/regs-rtc.h>
 #include <mach/regs-ciu.h>
@@ -4756,8 +4755,8 @@ static void __init emeidkb_init(void)
 
 #ifdef CONFIG_USB_EHCI_MV_U2O
 	/* U2O is single-role: register EHCI host instead of the gadget UDC. */
-	pxa168_device_u2oehci.dev.platform_data = &emeidkb_usb_pdata;
-	platform_device_register(&pxa168_device_u2oehci);
+	pxa988_device_u2oehci.dev.platform_data = &emeidkb_usb_pdata;
+	platform_device_register(&pxa988_device_u2oehci);
 #elif defined(CONFIG_USB_MV_UDC)
 	pxa988_device_udc.dev.platform_data = &emeidkb_usb_pdata;
 	platform_device_register(&pxa988_device_udc);

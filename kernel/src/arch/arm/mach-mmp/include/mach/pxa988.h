@@ -68,6 +68,9 @@ extern void pxa988_clear_keypad_wakeup(void);
 extern void pxa988_clear_sdh_wakeup(void);
 
 extern struct platform_device pxa988_device_udc;
+#ifdef CONFIG_USB_EHCI_MV_U2O
+extern struct platform_device pxa988_device_u2oehci;
+#endif
 extern struct platform_device pxa_device_coda7542;
 
 #define IOPWRDOM_VIRT_BASE	(APB_VIRT_BASE + 0x1e800)

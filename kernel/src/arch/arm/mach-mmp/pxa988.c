@@ -969,7 +969,7 @@ struct platform_device pxa988_device_gpio = {
 	.resource	= pxa988_resource_gpio,
 };
 
-#ifdef CONFIG_USB_MV_UDC
+#if defined(CONFIG_USB_MV_UDC) || defined(CONFIG_USB_EHCI_MV_U2O)
 static DEFINE_SPINLOCK(phy_lock);
 static int phy_init_cnt;
 
@@ -1136,6 +1136,7 @@ struct resource pxa988_udc_resources[] = {
 	},
 };
 
+#ifdef CONFIG_USB_MV_UDC
 struct platform_device pxa988_device_udc = {
 	.name		= "mv-udc",
 	.id		= -1,
@@ -1147,6 +1148,20 @@ struct platform_device pxa988_device_udc = {
 	}
 };
 #endif /* CONFIG_USB_MV_UDC */
+
+#ifdef CONFIG_USB_EHCI_MV_U2O
+struct platform_device pxa988_device_u2oehci = {
+	.name		= "pxa-u2oehci",
+	.id		= -1,
+	.resource	= pxa988_udc_resources,
+	.num_resources	= ARRAY_SIZE(pxa988_udc_resources),
+	.dev		=  {
+		.dma_mask	= &usb_dma_mask,
+		.coherent_dma_mask = 0xffffffff,
+	}
+};
+#endif /* CONFIG_USB_EHCI_MV_U2O */
+#endif /* CONFIG_USB_MV_UDC || CONFIG_USB_EHCI_MV_U2O */
 
 #if defined(CONFIG_TOUCHSCREEN_VNC)
 struct platform_device pxa988_device_vnc_touch = {
