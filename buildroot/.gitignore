@@ -1,0 +1,4 @@
+# Keep exact build products containing root credentials out of the public repository.
+/configs/t110-defconfig-v1
+/builds/minimal-v1/rootfs.tar
+/builds/minimal-v1/build.log
