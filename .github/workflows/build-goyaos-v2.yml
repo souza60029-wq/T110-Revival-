@@ -88,11 +88,11 @@ jobs:
           from pathlib import Path
           config = {}
           for line in Path(sys.argv[1]).read_text().splitlines():
-              match = re.match(r'^(BR2_[A-Z0-9_]+)=(.*)$', line)
+              match = re.match(r'^(BR2_[A-Za-z0-9_]+)=(.*)$', line)
               if match:
                   config[match.group(1)] = match.group(2).strip().strip('"')
               else:
-                  match = re.match(r'^# (BR2_[A-Z0-9_]+) is not set$', line)
+                  match = re.match(r'^# (BR2_[A-Za-z0-9_]+) is not set$', line)
                   if match:
                       config[match.group(1)] = 'n'
           required = {
