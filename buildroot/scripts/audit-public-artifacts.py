@@ -26,6 +26,22 @@ BLOCKED_BASENAME_RE = re.compile(
     r"dropbear_(?:rsa|dss|ecdsa|ed25519)_host_key|ssh_host_.*_key)$",
     re.IGNORECASE,
 )
+LEGAL_NOTICE_BASENAME_RE = re.compile(
+    r"^(?:licenses?|licences?|copying|notices?|copyrights?)(?:[._-].*)?$",
+    re.IGNORECASE,
+)
+USER_DATA_TOP_LEVEL = {"etc", "root", "home", "var"}
+
+
+def email_location_class(name: str) -> str:
+    """Classify email matches without exposing member paths or their contents."""
+    parts = PurePosixPath(name).parts
+    if parts and parts[0].lower() in USER_DATA_TOP_LEVEL:
+        return "user-config"
+    # Do not rewrite or discard upstream notices; their public contact details are legal metadata.
+    if parts and LEGAL_NOTICE_BASENAME_RE.fullmatch(parts[-1]):
+        return "upstream-legal-notice"
+    return "unclassified"
 
 
 def fail(message: str) -> None:
@@ -60,6 +76,14 @@ def scan_archive(archive: tarfile.TarFile) -> tuple[int, int]:
 
     for member in archive:
         name = normalized_name(member.name)
+        if any(
+            EMAIL_RE.search(value.encode("utf-8", "replace"))
+            for value in (member.name, member.uname, member.gname)
+            if value
+        ):
+            if email_location_class(name) == "user-config":
+                fail("email pattern found in user/config member metadata (path withheld)")
+            fail("email pattern found in rootfs member metadata (path withheld)")
         check_member_name(name)
         if not member.isfile():
             continue
@@ -77,7 +101,11 @@ def scan_archive(archive: tarfile.TarFile) -> tuple[int, int]:
             if PRIVATE_KEY_RE.search(blob) or SSH_PUBLIC_KEY_RE.search(blob):
                 fail("SSH/private-key material found in rootfs")
             if EMAIL_RE.search(blob):
-                fail("email address found in rootfs")
+                location = email_location_class(name)
+                if location == "user-config":
+                    fail("email pattern found in user/config data (member path withheld)")
+                if location == "unclassified":
+                    fail("email pattern found in unclassified rootfs member (member path withheld)")
             if any(pattern.search(blob) for pattern in TOKEN_RES):
                 fail("credential/token pattern found in rootfs")
             if collected is not None:
@@ -164,7 +192,8 @@ def main() -> None:
 
     print(
         "PASS: blank local root password; Dropbear password auth disabled; "
-        "no key/token/config/log indicators; Android boot and initramfs formats valid."
+        "email policy passed (upstream legal notices preserved); no key/token/config/log indicators; "
+        "Android boot and initramfs formats valid."
     )
 
 
