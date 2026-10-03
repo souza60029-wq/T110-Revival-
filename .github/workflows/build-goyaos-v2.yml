@@ -68,6 +68,19 @@ jobs:
             BR2_DEFCONFIG="$GITHUB_WORKSPACE/buildroot/configs/goyaos-v2-defconfig" \
             defconfig > "$RUNNER_TEMP/buildroot-defconfig.log" 2>&1; then
             echo "::error::Buildroot configuration failed; private configuration output was not published."
+            python3 - "$RUNNER_TEMP/buildroot-defconfig.log" <<'PY'
+          import re, sys
+          text = open(sys.argv[1], errors='replace').read()
+          classes = [
+              ('Kconfig parsing', r'(?i)(Kconfig.*(error|syntax)|syntax error)'),
+              ('missing make target/tool', r'(?i)(No rule to make target|command not found|Error 127)'),
+              ('filesystem/permissions', r'(?i)(No space left|Permission denied|Read-only file system)'),
+              ('external-tree path', r'(?i)(BR2_EXTERNAL|external tree).*(not found|missing|invalid)'),
+          ]
+          found = [name for name, pattern in classes if re.search(pattern, text)]
+          print('Sanitized failure class: ' + (', '.join(found) if found else 'unclassified make/config failure'))
+          print(f'Private diagnostic log retained only on ephemeral runner ({len(text.splitlines())} lines).')
+          PY
             exit 1
           fi
           python3 - "$out/.config" <<'PY'
