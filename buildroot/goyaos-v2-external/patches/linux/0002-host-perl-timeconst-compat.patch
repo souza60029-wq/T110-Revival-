@@ -1,0 +1,5 @@
+--- a/kernel/timeconst.pl
++++ b/kernel/timeconst.pl
+@@ -373 +373 @@
+-	if (!defined(@val)) {
++	if (!@val) {

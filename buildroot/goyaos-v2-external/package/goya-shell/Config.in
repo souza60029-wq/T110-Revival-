@@ -1,0 +1,7 @@
+config BR2_PACKAGE_GOYA_SHELL
+	bool "GoyaOS V2 desktop shell"
+	depends on BR2_PACKAGE_LVGL
+	help
+	  Small single-process touchscreen desktop shell for the SM-T110.
+	  It owns /dev/fb0 through the LVGL fbdev backend and uses the BT532
+	  touchscreen through evdev.

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        if [ -w /proc/sys/vm/swappiness ]; then
+            echo 60 > /proc/sys/vm/swappiness
+        fi
+        ;;
+    stop|restart|reload)
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|reload}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

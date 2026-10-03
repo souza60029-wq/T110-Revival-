@@ -1,0 +1,11 @@
+--- a/drivers/marvell/marvell-telephony/drivers/Makefile
++++ b/drivers/marvell/marvell-telephony/drivers/Makefile
+@@ -1,5 +1,7 @@
+ obj-y                           += cp_load/
+ obj-y                           += shmem/msocket/
+-obj-y                           += diag/
++# The legacy modem DIAG modules depend on the Android USB gadget; GoyaOS
++# uses the standard g_ether gadget and does not need these modules.
++obj-$(CONFIG_USB_G_ANDROID)     += diag/
+ obj-y                           += citty/build/
+ obj-y                           += cidatastub/

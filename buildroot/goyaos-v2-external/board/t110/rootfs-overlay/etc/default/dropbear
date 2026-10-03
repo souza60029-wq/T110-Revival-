@@ -1,0 +1,2 @@
+# Disable all password-based authentication; only authorized public keys may log in.
+DROPBEAR_ARGS="-s"

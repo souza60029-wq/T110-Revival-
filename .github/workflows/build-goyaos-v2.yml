@@ -1,0 +1,179 @@
+name: Build GoyaOS V2
+
+on:
+  push:
+    branches:
+      - goyaos-v2
+    paths:
+      - '.github/workflows/build-goyaos-v2.yml'
+      - 'buildroot/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and audit GoyaOS V2 for SM-T110
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build and packaging dependencies
+        run: |
+          set -eu
+          sudo apt-get update -qq > "$RUNNER_TEMP/apt-update.log" 2>&1
+          sudo apt-get install --yes --no-install-recommends \
+            bc bison build-essential cpio curl file flex git libelf-dev \
+            libncurses-dev libssl-dev patch python3 rsync abootimg \
+            wget xz-utils zlib1g-dev > "$RUNNER_TEMP/apt-install.log" 2>&1
+
+      - name: Download and patch Buildroot 2025.02.18
+        run: |
+          set -eu
+          url="https://buildroot.org/downloads/buildroot-2025.02.18.tar.xz"
+          curl -fsSL --retry 3 "$url" -o "$RUNNER_TEMP/buildroot-2025.02.18.tar.xz"
+          tar -xf "$RUNNER_TEMP/buildroot-2025.02.18.tar.xz" -C "$RUNNER_TEMP"
+          br="$RUNNER_TEMP/buildroot-2025.02.18"
+          test -f "$br/Makefile"
+          cd "$br"
+          patch --batch --forward --fuzz=0 -p1 \
+            < "$GITHUB_WORKSPACE/buildroot/patches/0001-t110-buildroot-kernel-subdir-and-cross-override.patch" \
+            > "$RUNNER_TEMP/buildroot-patch.log" 2>&1
+          echo "BUILDROOT_DIR=$br" >> "$GITHUB_ENV"
+
+      - name: Install pinned Android arm-eabi-4.6 toolchain
+        env:
+          TOOLCHAIN_COMMIT: b4ecd7806d8f46cddeacaf9f8de92c191fb266e4
+        run: |
+          set -eu
+          tc="$RUNNER_TEMP/arm-eabi-4.6"
+          git clone --quiet --depth 1 --branch jb-release \
+            https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6 \
+            "$tc" > "$RUNNER_TEMP/toolchain-clone.log" 2>&1
+          test "$(git -C "$tc" rev-parse HEAD)" = "$TOOLCHAIN_COMMIT"
+          test -x "$tc/bin/arm-eabi-gcc"
+          echo "GOYAOS_KERNEL_CROSS_COMPILE=$tc/bin/arm-eabi-" >> "$GITHUB_ENV"
+
+      - name: Configure from the public V2 defconfig
+        run: |
+          set -eu
+          out="$RUNNER_TEMP/goyaos-v2-buildroot-out"
+          mkdir -p "$out"
+          if ! make -C "$BUILDROOT_DIR" O="$out" \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE/buildroot/goyaos-v2-external" \
+            BR2_DEFCONFIG="$GITHUB_WORKSPACE/buildroot/configs/goyaos-v2-defconfig" \
+            defconfig > "$RUNNER_TEMP/buildroot-defconfig.log" 2>&1; then
+            echo "::error::Buildroot configuration failed; private configuration output was not published."
+            exit 1
+          fi
+          python3 - "$out/.config" <<'PY'
+          import re, sys
+          from pathlib import Path
+          config = {}
+          for line in Path(sys.argv[1]).read_text().splitlines():
+              match = re.match(r'^(BR2_[A-Z0-9_]+)=(.*)$', line)
+              if match:
+                  config[match.group(1)] = match.group(2).strip().strip('"')
+              else:
+                  match = re.match(r'^# (BR2_[A-Z0-9_]+) is not set$', line)
+                  if match:
+                      config[match.group(1)] = 'n'
+          required = {
+              'BR2_arm': 'y',
+              'BR2_cortex_a9': 'y',
+              'BR2_ARM_EABIHF': 'y',
+              'BR2_ARM_ENABLE_NEON': 'y',
+              'BR2_ARM_FPU_NEON': 'y',
+              'BR2_TOOLCHAIN_BUILDROOT_MUSL': 'y',
+              'BR2_LINUX_KERNEL_CUSTOM_REPO_VERSION': '473b5fbe34cd2d56f5f52dabba0db9280e8c49ba',
+              'BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR': 'kernel/src',
+              'BR2_LINUX_KERNEL_DEFCONFIG': 'pxa986_goyawifi_rev02',
+              'BR2_PACKAGE_LVGL': 'y',
+              'BR2_PACKAGE_GOYA_SHELL': 'y',
+              'BR2_TARGET_ROOTFS_TAR': 'y',
+              'BR2_LINUX_KERNEL_ZIMAGE': 'y',
+          }
+          for key, expected in required.items():
+              if config.get(key) != expected:
+                  raise SystemExit(f'Protected Buildroot setting mismatch: {key}')
+          print('PASS: ARM/Cortex-A9/EABIhf/NEON/musl and pinned kernel settings verified.')
+          PY
+          echo "GOYAOS_BUILDROOT_OUT=$out" >> "$GITHUB_ENV"
+
+      - name: Build Buildroot V2 (full compiler log is not uploaded or printed)
+        run: |
+          set -eu
+          export KBUILD_BUILD_VERSION=2
+          if ! make -C "$BUILDROOT_DIR" O="$GOYAOS_BUILDROOT_OUT" \
+            BR2_EXTERNAL="$GITHUB_WORKSPACE/buildroot/goyaos-v2-external" \
+            LINUX_CROSS_COMPILE="$GOYAOS_KERNEL_CROSS_COMPILE" \
+            LINUX_CFLAGS= -j"$(nproc)" \
+            > "$RUNNER_TEMP/goyaos-v2-build.log" 2>&1; then
+            echo "::error::Buildroot V2 failed; the raw build log and .config were not published."
+            exit 1
+          fi
+          test -s "$GOYAOS_BUILDROOT_OUT/images/zImage"
+          test -s "$GOYAOS_BUILDROOT_OUT/images/rootfs.tar"
+
+      - name: Verify kernel configuration and package the Android boot image
+        run: |
+          set -eu
+          out="$GOYAOS_BUILDROOT_OUT"
+          kcfg="$out/build/linux-473b5fbe34cd2d56f5f52dabba0db9280e8c49ba/.config"
+          grep -qx 'CONFIG_USB_ETH=y' "$kcfg"
+          grep -qx 'CONFIG_USB_GADGET=y' "$kcfg"
+          grep -qx 'CONFIG_USB_MV_UDC=y' "$kcfg"
+          grep -qx '# CONFIG_USB_G_ANDROID is not set' "$kcfg"
+          if grep -Eq '^CONFIG_USB_(EHCI|OHCI|UHCI|XHCI|HOST|OTG)[A-Z0-9_]*=(y|m)$' "$kcfg"; then
+            echo "::error::A USB host/OTG controller is enabled; refusing V2 artifact publication."
+            exit 1
+          fi
+          grep -qx 'CONFIG_ZRAM=y' "$kcfg"
+          grep -qx 'CONFIG_ZSMALLOC=y' "$kcfg"
+          if find "$out/target/lib/modules" -type f \
+            \( -name 'gs_diag.ko' -o -name 'gs_marvell_diag.ko' \) -print -quit 2>/dev/null | grep -q .; then
+            echo "::error::Legacy Marvell DIAG module found; refusing artifact publication."
+            exit 1
+          fi
+          release=$(sed -n 's/^#define UTS_RELEASE "\(.*\)"/\1/p' \
+            "$out/build/linux-473b5fbe34cd2d56f5f52dabba0db9280e8c49ba/include/generated/utsrelease.h")
+          test "$release" = '3.4.5-2679758'
+          mkdir -p "$out/images"
+          "$GITHUB_WORKSPACE/buildroot/scripts/package-t110-boot.sh" \
+            "$out/images/zImage" "$out/images/rootfs.tar" \
+            "$GITHUB_WORKSPACE/buildroot/bootimg-goyaos-v2.cfg" \
+            "$out/images/T110-GoyaOS-V2-boot.img" \
+            "$out/images/T110-GoyaOS-V2-initramfs.cpio.gz" \
+            > "$RUNNER_TEMP/boot-package.log" 2>&1
+
+      - name: Audit public payload and create the five-file artifact bundle
+        run: |
+          set -eu
+          out="$GOYAOS_BUILDROOT_OUT/images"
+          python3 "$GITHUB_WORKSPACE/buildroot/scripts/audit-public-artifacts.py" \
+            --rootfs "$out/rootfs.tar" --zimage "$out/zImage" \
+            --boot "$out/T110-GoyaOS-V2-boot.img" \
+            --initramfs "$out/T110-GoyaOS-V2-initramfs.cpio.gz"
+          dest="$RUNNER_TEMP/goyaos-v2-public-artifacts"
+          mkdir -p "$dest"
+          cp "$out/zImage" "$dest/zImage"
+          cp "$out/rootfs.tar" "$dest/rootfs.tar"
+          cp "$out/T110-GoyaOS-V2-boot.img" "$dest/T110-GoyaOS-V2-boot.img"
+          cp "$out/T110-GoyaOS-V2-initramfs.cpio.gz" "$dest/T110-GoyaOS-V2-initramfs.cpio.gz"
+          (cd "$dest" && sha256sum zImage rootfs.tar T110-GoyaOS-V2-boot.img \
+            T110-GoyaOS-V2-initramfs.cpio.gz > SHA256SUMS.txt)
+          test "$(find "$dest" -maxdepth 1 -type f | wc -l)" -eq 5
+          for file in "$dest"/*; do stat -c '%n %s bytes' "$file"; done
+
+      - name: Upload only the five audited public artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoyaOS-V2-public-${{ github.run_number }}
+          path: ${{ runner.temp }}/goyaos-v2-public-artifacts/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0

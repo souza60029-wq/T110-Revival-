@@ -1,0 +1,35 @@
+LVGL_VERSION = v9.6.0
+LVGL_SOURCE = $(LVGL_VERSION).tar.gz
+LVGL_SITE = https://github.com/lvgl/lvgl/archive/refs/tags
+LVGL_LICENSE = MIT
+LVGL_LICENSE_FILES = LICENCE.txt
+LVGL_INSTALL_STAGING = YES
+LVGL_INSTALL_TARGET = NO
+
+LVGL_CONF_OPTS = \
+	-DBUILD_SHARED_LIBS=OFF \
+	-DLV_BUILD_INSTALL=ON \
+	-DLV_BUILD_CONF_PATH=$(BR2_EXTERNAL_GOYAOS_V2_PATH)/board/t110/lv_conf.h \
+	-DLV_BUILD_LVGL_H_SYSTEM_INCLUDE=ON \
+	-DLV_BUILD_LVGL_H_SIMPLE_INCLUDE=OFF \
+	-DLV_BUILD_USE_KCONFIG=OFF \
+	-DLV_BUILD_SET_CONFIG_OPTS=OFF \
+	-DLV_BUILD_TESTS=OFF \
+	-DLV_USE_FIND_PACKAGE=OFF \
+	-DLV_USE_PKG_CONFIG=OFF \
+	-DLV_FETCH_DEPENDENCIES=OFF \
+	-DCONFIG_LV_BUILD_EXAMPLES=OFF \
+	-DCONFIG_LV_BUILD_DEMOS=OFF \
+	-DCONFIG_LV_USE_THORVG=OFF \
+	-DCONFIG_LV_USE_THORVG_INTERNAL=OFF
+
+define LVGL_USE_C_ONLY
+	grep -Fq 'LANGUAGES C CXX' $(@D)/CMakeLists.txt
+	grep -Fq '/src/*.cpp' $(@D)/env_support/cmake/main.cmake
+	sed -i 's/LANGUAGES C CXX/LANGUAGES C/' $(@D)/CMakeLists.txt
+	sed -i 's/enable_language(C CXX)/enable_language(C)/' $(@D)/CMakeLists.txt
+	sed -i '\|/src/\*\.cpp|d' $(@D)/env_support/cmake/main.cmake
+endef
+LVGL_PRE_CONFIGURE_HOOKS += LVGL_USE_C_ONLY
+
+$(eval $(cmake-package))

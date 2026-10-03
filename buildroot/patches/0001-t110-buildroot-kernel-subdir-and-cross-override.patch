@@ -1,0 +1,90 @@
+--- a/linux/Config.in
++++ b/linux/Config.in
+@@ -130,6 +130,14 @@
+ 	  Git/Mercurial/Subversion E.G. a sha id, a tag, branch, ..
+ 
+ endif
++
++config BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR
++	string "Kernel source subdirectory in custom repository"
++	depends on BR2_LINUX_KERNEL_CUSTOM_GIT
++	help
++	  Relative path inside the custom Git repository where the Linux
++	  kernel source tree is located. Leave empty when sources are at
++	  the repository root.
+ 
+ config BR2_LINUX_KERNEL_CUSTOM_REPO_GIT_SUBMODULES
+ 	bool "Download also git submodules"
+--- a/linux/linux.mk
++++ b/linux/linux.mk
+@@ -152,16 +152,35 @@
+ LINUX_EXTRA_DOWNLOADS += $(ARCH_XTENSA_OVERLAY_URL)
+ endif
+ 
++ifneq ($(call qstrip,$(BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR)),)
++define LINUX_CUSTOM_REPO_SUBDIR_EXTRACT
++	set -eu; \
++	subdir='$(call qstrip,$(BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR))'; \
++	case "$$subdir" in /*|..|../*|*/../*|*/..) echo "Invalid kernel repository subdirectory: $$subdir" >&2; exit 1;; esac; \
++	src="$(@D)/$$subdir"; \
++	test -f "$$src/Makefile" || { echo "No kernel Makefile in $$src" >&2; exit 1; }; \
++	tmp="$(@D).t110-kernel-source"; \
++	rm -rf "$$tmp"; \
++	mv "$$src" "$$tmp"; \
++	rm -rf "$(@D)"; \
++	mv "$$tmp" "$(@D)"
++endef
++LINUX_POST_EXTRACT_HOOKS += LINUX_CUSTOM_REPO_SUBDIR_EXTRACT
++endif
++
+ # We don't want to run depmod after installing the kernel. It's done in a
+ # target-finalize hook, to encompass modules installed by packages.
+ # Disable building host tools with -Werror: newer gcc versions can be
+ # extra picky about some code (https://bugs.busybox.net/show_bug.cgi?id=14826)
++# The default remains Buildroot's cross toolchain; this variable allows a
++# kernel-only compiler override without changing the target toolchain.
++LINUX_CROSS_COMPILE ?= $(TARGET_CROSS)
+ LINUX_MAKE_FLAGS = \
+ 	HOSTCC="$(HOSTCC) $(subst -I/,-isystem /,$(subst -I /,-isystem /,$(HOST_CFLAGS))) $(HOST_LDFLAGS)" \
+ 	ARCH=$(KERNEL_ARCH) \
+ 	KCFLAGS="$(LINUX_CFLAGS)" \
+ 	INSTALL_MOD_PATH=$(TARGET_DIR) \
+-	CROSS_COMPILE="$(TARGET_CROSS)" \
++	CROSS_COMPILE="$(LINUX_CROSS_COMPILE)" \
+ 	WERROR=0 \
+ 	REGENERATE_PARSERS=1 \
+ 	DEPMOD=$(HOST_DIR)/sbin/depmod
+--- a/package/linux-headers/linux-headers.mk
++++ b/package/linux-headers/linux-headers.mk
+@@ -167,4 +167,20 @@
+ LINUX_HEADERS_POST_INSTALL_STAGING_HOOKS += LINUX_HEADERS_CHECK_VERSION
+ endif
+ 
++ifneq ($(call qstrip,$(BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR)),)
++define LINUX_HEADERS_CUSTOM_REPO_SUBDIR_EXTRACT
++	set -eu; \
++	subdir='$(call qstrip,$(BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR))'; \
++	case "$$subdir" in /*|..|../*|*/../*|*/..) echo "Invalid kernel repository subdirectory: $$subdir" >&2; exit 1;; esac; \
++	src="$(@D)/$$subdir"; \
++	test -f "$$src/Makefile" || { echo "No kernel Makefile in $$src" >&2; exit 1; }; \
++	tmp="$(@D).t110-kernel-source"; \
++	rm -rf "$$tmp"; \
++	mv "$$src" "$$tmp"; \
++	rm -rf "$(@D)"; \
++	mv "$$tmp" "$(@D)"
++endef
++LINUX_HEADERS_POST_EXTRACT_HOOKS += LINUX_HEADERS_CUSTOM_REPO_SUBDIR_EXTRACT
++endif
++
+ $(eval $(generic-package))
+--- a/toolchain/helpers.mk
++++ b/toolchain/helpers.mk
+@@ -169,7 +169,7 @@
+ #
+ check_kernel_headers_version = \
+ 	if ! support/scripts/check-kernel-headers.sh $(1) $(2) $(3) \
+-		$(if $(BR2_TOOLCHAIN_HEADERS_LATEST),$(4),strict); \
++		$(if $(BR2_TOOLCHAIN_HEADERS_LATEST)$(BR2_LINUX_KERNEL_CUSTOM_REPO_SUBDIR),$(4),strict); \
+ 	then \
+ 		exit 1; \
+ 	fi

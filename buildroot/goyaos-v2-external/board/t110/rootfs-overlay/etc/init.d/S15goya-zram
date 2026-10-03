@@ -1,0 +1,29 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        [ -e /sys/block/zram0/disksize ] || exit 0
+        [ -b /dev/zram0 ] || exit 0
+
+        if ! grep -q '^/dev/zram0[[:space:]]' /proc/swaps; then
+            state=$(cat /sys/block/zram0/initstate 2>/dev/null || echo 0)
+            if [ "$state" = 0 ]; then
+                # CONFIG_ZRAM_FOR_ANDROID interprets zero as its 25%-of-RAM default.
+                echo 0 > /sys/block/zram0/disksize || exit 0
+            fi
+            /sbin/mkswap /dev/zram0 >/dev/null 2>&1 || exit 0
+            /sbin/swapon /dev/zram0 >/dev/null 2>&1 || exit 0
+        fi
+        ;;
+    stop)
+        /sbin/swapoff /dev/zram0 >/dev/null 2>&1 || true
+        ;;
+    restart|reload)
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|reload}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

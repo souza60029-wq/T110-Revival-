@@ -1,0 +1,6 @@
+menu "GoyaOS V2 packages"
+
+source "$BR2_EXTERNAL_GOYAOS_V2_PATH/package/lvgl/Config.in"
+source "$BR2_EXTERNAL_GOYAOS_V2_PATH/package/goya-shell/Config.in"
+
+endmenu

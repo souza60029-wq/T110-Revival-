@@ -1,0 +1,6 @@
+config BR2_PACKAGE_LVGL
+	bool "LVGL 9.6.0 graphics library"
+	help
+	  Lightweight C graphics library used by the GoyaOS V2 desktop shell.
+	  The package is built as a static library with only fbdev and evdev
+	  backends enabled; demos, examples and ThorVG are disabled.

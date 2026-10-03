@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Let framebuffer and input device nodes settle before starting the supervised UI.
+sleep 1
+exec /usr/bin/goya-shell >/dev/ttyS1 2>&1
